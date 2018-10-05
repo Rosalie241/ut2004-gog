@@ -86,12 +86,15 @@ function prepare()
 {
     exe="$1"
 
+    program="$(basename "$0")"
     if [ ! -f "$exe" ]
     then
-        printf "%s\n%s\n%s\n" \
-            "no exe specified" \
-            "usage for first run:" \
-            "$0 path/to/ut2004/exe"
+        printf "%s\n\n%s\n%s\n\n%s\n%s\n\n" \
+            "error: no valid installer specified!" \
+            "Usage:" \
+            "   $program [UT2004 INSTALLER FROM GOG]" \
+            "Example:" \
+            "   $program setup.exe"
         exit 1
     fi
 
