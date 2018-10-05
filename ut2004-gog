@@ -71,12 +71,14 @@ function get_cdkey()
 
 function install_clean()
 {
+    log "cleaning"
     rm -rf "$wine_dir" \
         "$data_dir/UT2004-Patch"
 }
 
 function install_cdkey()
 {
+    log "installing cdkey"
     echo "$cdkey" > "$game_dir/System/CDkey"
 }
 
