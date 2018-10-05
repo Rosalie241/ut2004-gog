@@ -19,7 +19,7 @@ function log()
 
 function install_patch()
 {
-    if [ -f "$opt_dir/ut2004-lnxpatch3369-2.tar.bz2" ]
+    if [ -f "$opt_dir/ut2004-linux.tar.bz2" ]
     then
         patch_file="$opt_dir/ut2004-linux.tar.bz2"
     else
