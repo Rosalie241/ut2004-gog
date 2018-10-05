@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+set -e
+
+data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/ut2004-gog"
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/ut2004-gog"
+opt_dir="/opt/ut2004-gog"
+
+game_dir="$data_dir/ut2004"
+wine_dir="$data_dir/wine"
+
+patch_url="https://github.com/tim241/ut2004-gog/raw/master/ut2004-linux.tar.bz2"
+
+export WINEPREFIX="$data_dir/wine"
+
+function log()
+{
+    echo "[LOG] $*"
+}
+
+function install_patch()
+{
+    if [ -f "$opt_dir/ut2004-lnxpatch3369-2.tar.bz2" ]
+    then
+        patch_file="$opt_dir/ut2004-linux.tar.bz2"
+    else
+        patch_file="$cache_dir/ut2004-linux.tar.bz2"
+        log "downloading game patch"
+        curl -s "$patch_url" -o "$patch_file"
+    fi
+    
+    log "extracting patch"
+    tar xf "$patch_file" -C "$data_dir/"
+    
+    log "installing game patch"
+    cp -r "$data_dir/UT2004-Patch"/* \
+        "$game_dir"
+}
+
+function install_symlinks()
+{
+    log "symlinking libraries"
+    ln -s /usr/lib/libSDL-1.2.so.0 \
+       "$game_dir/System/"
+    ln -s /usr/lib/libopenal.so \
+        "$game_dir/System/openal.so"
+}
+
+function get_cdkey()
+{
+    log "retrieving cdkey"
+    cdkey="$(wine REG QUERY 'HKEY_LOCAL_MACHINE\SOFTWARE\Unreal Technology\Installed Apps\UT2004' \
+        /v 'CDkey' \
+        | awk '{ print $3 }' \
+        | sed -n 3p)"
+
+    if [ "$cdkey" ]
+    then
+        log "cdkey found: $cdkey"
+    else
+        log "failed to retrieve cdkey"
+    fi
+    
+    while [ ! "$cdkey" ]
+    do
+        echo "Please enter the cdkey manually and press enter"
+        printf "enter cdkey: "
+        read cdkey
+    done
+}
+
+function install_clean()
+{
+    rm -rf "$wine_dir" \
+        "$data_dir/UT2004-Patch"
+}
+
+function install_cdkey()
+{
+    echo "$cdkey" > "$game_dir/System/CDkey"
+}
+
+function prepare()
+{
+    exe="$1"
+
+    if [ ! -f "$exe" ]
+    then
+        printf "%s\n%s\n%s\n" \
+            "no exe specified" \
+            "usage for first run:" \
+            "$0 path/to/ut2004/exe"
+        exit 1
+    fi
+
+    mkdir -p "$data_dir" \
+        "$data_dir/wine" \
+        "$data_dir/ut2004" \
+        "$cache_dir" 
+
+    log "[WINE] preparing wine prefix"
+    wineboot --init &> "$cache_dir/wineboot.log"
+
+    log "[WINE] disabling crash dialog"
+    winetricks nocrashdialog &> "$cache_dir/winetricks.log"
+    
+    log "[WINE] executing '$exe'"
+    wine "$exe" &> "$cache_dir/wine.log"
+    
+    log "copying game files"
+    cp -r "$wine_dir/drive_c/GOG Games/Unreal Tournament 2004"/* \
+        "$game_dir"
+
+    install_patch
+    install_symlinks
+
+    get_cdkey
+    install_cdkey
+
+    install_clean
+}
+
+if [ "$1" = "-c" ] || \
+    [ "$1" = "--clean" ]
+then
+    rm -rf "$data_dir" \
+        "$cache_dir"
+    shift
+fi
+
+file_list=(
+        'System/ut2004-bin-linux-amd64'
+        'System/ut2004-bin'
+        'System/CDkey'
+        'System/libSDL-1.2.so.0'
+        'System/openal.so'
+        'System/UT2004.exe'
+        )
+
+missing=no
+for file in "${file_list[@]}"
+do
+    if [ ! -f "$game_dir/$file" ]
+    then
+        missing=yes
+    fi
+done
+
+if [ "$missing" = "yes" ]
+then
+    prepare "$@"
+fi
+
+cd "$game_dir/System"
+
+log "detecting architecture"
+if [ "$(uname -m | grep '64')" ]
+then
+    log "launching 64 bit client"
+    ./ut2004-bin-linux-amd64
+else
+    log "launching 32 bit client"
+    ./ut2004-bin
+fi
+
