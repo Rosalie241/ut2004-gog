@@ -119,7 +119,7 @@ function prepare()
 
     install_clean
 
-    winserver -k
+    wineserver -k
 }
 
 if [ "$1" = "-c" ] || \
