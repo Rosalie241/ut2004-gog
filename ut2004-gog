@@ -95,20 +95,19 @@ function prepare()
 
     mkdir -p "$data_dir" \
         "$data_dir/wine" \
-        "$data_dir/ut2004" \
         "$cache_dir" 
 
-    log "[WINE] preparing wine prefix"
+    log "[WINE] creating wine prefix"
     wineboot --init &> "$cache_dir/wineboot.log"
 
-    log "[WINE] disabling crash dialog"
+    log "[WINE] winetricks nocrashdialog"
     winetricks nocrashdialog &> "$cache_dir/winetricks.log"
     
-    log "[WINE] executing '$exe'"
+    log "[WINE] launching '$exe'"
     wine "$exe" &> "$cache_dir/wine.log"
     
-    log "copying game files"
-    cp -r "$wine_dir/drive_c/GOG Games/Unreal Tournament 2004"/* \
+    log "moving game files"
+    mv "$wine_dir/drive_c/GOG Games/Unreal Tournament 2004/" \
         "$game_dir"
 
     install_patch
@@ -118,8 +117,8 @@ function prepare()
     install_cdkey
 
     wineserver -k
-
     install_clean
+
 }
 
 if [ "$1" = "-c" ] || \
