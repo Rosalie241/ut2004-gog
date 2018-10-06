@@ -9,6 +9,10 @@ game_dir="$data_dir/ut2004"
 wine_dir="$data_dir/wine"
 
 patch_url="https://raw.githubusercontent.com/tim241/ut2004-gog/master/ut2004-linux.tar.bz2"
+patch_checksum="438b9b13a367d46f23cce12b065382a55afa2fc68add1f1dd3db03b015f60bb3"
+
+game_exe_checksum="327feb7c7d96a65be57ef34e5cd5e10bd57eb4082b2bd6028f1415168a0c8083"
+game_bin_checksum="677f388edebe3af7f12e5a16cdf5c5c20f9164c9d5da0eced1650d1b655adb81"
 
 export WINEPREFIX="$data_dir/wine"
 
@@ -24,21 +28,23 @@ function install_patch()
         patch_file="$opt_dir/ut2004-linux.tar.bz2"
     else
         patch_file="$cache_dir/ut2004-linux.tar.bz2"
-        log "downloading game patch"
+        log "[GAME] downloading game patch"
         curl -s "$patch_url" -o "$patch_file"
     fi
     
-    log "extracting patch"
+    verify_checksum "$patch_checksum" "$patch_file"
+
+    log "[GAME] extracting patch"
     tar xf "$patch_file" -C "$data_dir/"
     
-    log "installing game patch"
+    log "[GAME] installing game patch"
     cp -r "$data_dir/UT2004-Patch"/* \
         "$game_dir"
 }
 
 function install_symlinks()
 {
-    log "symlinking libraries"
+    log "[GAME] symlinking libraries"
     ln -s /usr/lib/libSDL-1.2.so.0 \
        "$game_dir/System/"
     ln -s /usr/lib/libopenal.so \
@@ -47,7 +53,7 @@ function install_symlinks()
 
 function get_cdkey()
 {
-    log "retrieving cdkey"
+    log "[GAME] retrieving cdkey"
     cdkey="$(wine REG QUERY 'HKEY_LOCAL_MACHINE\SOFTWARE\Unreal Technology\Installed Apps\UT2004' \
         /v 'CDkey' \
         | awk '{ print $3 }' \
@@ -55,9 +61,9 @@ function get_cdkey()
 
     if [ "$cdkey" ]
     then
-        log "cdkey found: $cdkey"
+        log "[GAME] cdkey found: $cdkey"
     else
-        log "failed to retrieve cdkey"
+        log "[GAME] failed to retrieve cdkey"
     fi
     
     while [ ! "$cdkey" ]
@@ -71,20 +77,21 @@ function get_cdkey()
 
 function install_clean()
 {
-    log "cleaning"
+    log "[GAME] cleaning"
     rm -rf "$wine_dir" \
         "$data_dir/UT2004-Patch"
 }
 
 function install_cdkey()
 {
-    log "installing cdkey"
+    log "[GAME] installing cdkey"
     echo "$cdkey" > "$game_dir/System/CDkey"
 }
 
 function prepare()
 {
     exe="$1"
+    bin="${exe//.exe/-1.bin}"
 
     program="$(basename "$0")"
     if [ ! -f "$exe" ]
@@ -98,6 +105,15 @@ function prepare()
         exit 1
     fi
 
+    verify_checksum "$game_exe_checksum" "$exe"
+    if [ -f "$bin" ] && \
+         [ "${bin: -3}" = "bin" ]
+    then
+        verify_checksum "$game_bin_checksum" "$bin"
+    else
+        log "cannot find bin file"
+    fi
+    
     mkdir -p "$data_dir" \
         "$data_dir/wine" \
         "$cache_dir" 
@@ -111,7 +127,7 @@ function prepare()
     log "[WINE] launching '$exe'"
     wine "$exe" &> "$cache_dir/wine.log"
     
-    log "moving game files"
+    log "[GAME] moving game files"
     mv "$wine_dir/drive_c/GOG Games/Unreal Tournament 2004/" \
         "$game_dir"
 
@@ -124,6 +140,23 @@ function prepare()
     wineserver -k
     install_clean
 
+}
+
+function verify_checksum()
+{
+    checksum="$1"
+    shift
+
+    log "[CHECKSUM] verifying '$@'"
+    file_checksum="$(sha256sum "$@" | awk '{ print $1 }')"
+
+    if [ "$checksum" != "$file_checksum" ]
+    then
+        log "[CHECKSUM] mismatch! expected '$checksum' got '$file_checksum'"
+        exit 1
+    else
+        log "[CHECKSUM] matched!"
+    fi
 }
 
 if [ "$1" = "-c" ] || \
@@ -159,13 +192,13 @@ fi
 
 cd "$game_dir/System"
 
-log "detecting architecture"
+log "[GAME] detecting architecture"
 if [ "$(uname -m | grep '64')" ]
 then
-    log "launching 64 bit client"
+    log "[GAME] launching 64 bit client"
     ./ut2004-bin-linux-amd64
 else
-    log "launching 32 bit client"
+    log "[GAME] launching 32 bit client"
     ./ut2004-bin
 fi
 
