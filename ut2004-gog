@@ -150,9 +150,12 @@ function prepare()
     get_cdkey
     install_cdkey
 
+    # This can fail, so make sure we won't crash
+    set +e
     wineserver -k
-    install_clean
+    set -e
 
+    install_clean
 }
 
 function verify_checksum()
