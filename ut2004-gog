@@ -22,6 +22,12 @@ function log()
     echo "[LOG] $*"
 }
 
+function download_patch()
+{
+    log "[GAME] downloading game patch"
+    curl -s "$patch_url" -o "$patch_file"
+}
+
 function install_patch()
 {
     if [ -f "$opt_dir/$patch_file_name" ]
@@ -29,11 +35,21 @@ function install_patch()
         patch_file="$opt_dir/$patch_file_name"
     else
         patch_file="$cache_dir/$patch_file_name"
-        log "[GAME] downloading game patch"
-        curl -s "$patch_url" -o "$patch_file"
+        if [ ! -f "$patch_file" ]
+        then
+            download_patch
+        else
+            if ! verify_checksum "$patch_checksum" "$patch_file"
+            then
+                download_patch
+            fi
+        fi
     fi
     
-    verify_checksum "$patch_checksum" "$patch_file"
+    if ! verify_checksum "$patch_checksum" "$patch_file"
+    then
+        exit 1
+    fi
 
     log "[GAME] installing patch"
     tar xf "$patch_file" -C "$game_dir/"
@@ -115,11 +131,18 @@ function prepare()
         exit 1
     fi
 
-    verify_checksum "$game_exe_checksum" "$exe"
+    if ! verify_checksum "$game_exe_checksum" "$exe"
+    then
+        exit 1
+    fi
+
     if [ -f "$bin" ] && \
          [ "${bin: -3}" = "bin" ]
     then
-        verify_checksum "$game_bin_checksum" "$bin"
+        if ! verify_checksum "$game_bin_checksum" "$bin"
+        then
+            exit 1
+        fi
     else
         log "cannot find bin file"
     fi
@@ -169,9 +192,10 @@ function verify_checksum()
     if [ "$checksum" != "$file_checksum" ]
     then
         log "[CHECKSUM] mismatch! expected '$checksum' got '$file_checksum'"
-        exit 1
+        return 1
     else
         log "[CHECKSUM] matched!"
+        return 0
     fi
 }
 
