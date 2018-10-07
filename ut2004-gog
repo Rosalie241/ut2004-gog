@@ -61,7 +61,7 @@ function install_patch()
 
 function download_sdlcl()
 {
-	log "[SDLCL] downloading prebuilt"
+    log "[SDLCL] downloading prebuilt"
     curl -s -L https://github.com/tim241/sdlcl/releases/download/1/sdlcl.tar.gz -o "$cache_dir/sdlcl.tar.gz"
 }
 
@@ -81,9 +81,9 @@ function install_prebuilt_sdlcl()
         download_sdlcl
     fi
     
-	log "[SDLCL] extracting prebuilt"
+    log "[SDLCL] extracting prebuilt"
 
-	tar xf "$cache_dir/sdlcl.tar.gz" -C "$cache_dir/sdlcl_bin"
+    tar xf "$cache_dir/sdlcl.tar.gz" -C "$cache_dir/sdlcl_bin"
 
     if [ "$(uname -m | grep '64')" ]
     then
@@ -117,7 +117,7 @@ function install_sdlcl()
         log "[SDLCL] trying to build"
         if ! make -j$(nproc) &> "$cache_dir/sdlcl_make.log"
         then
-			log "[SDLCL] building failed, installing prebuilt"
+            log "[SDLCL] building failed, installing prebuilt"
             install_prebuilt_sdlcl
         else
             cp "$sdlcl_file_name" "$cache_dir/bin/$sdlcl_file_name"
