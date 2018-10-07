@@ -15,6 +15,10 @@ patch_checksum="148b9cf081bb793c7f4668f25ae181fd9509d7fc540915b52d22a75d33b5a046
 game_exe_checksum="327feb7c7d96a65be57ef34e5cd5e10bd57eb4082b2bd6028f1415168a0c8083"
 game_bin_checksum="677f388edebe3af7f12e5a16cdf5c5c20f9164c9d5da0eced1650d1b655adb81"
 
+sdlcl_prebuilt_checksum="c593ac43a9e8913d308833fd79499bb0348bfc05f4fe469ecdacd2feaa06bf37"
+sdlcl_file_name="libSDL-1.2.so.0"
+
+
 export WINEPREFIX="$data_dir/wine"
 
 function log()
@@ -55,11 +59,88 @@ function install_patch()
     tar xf "$patch_file" -C "$game_dir/"
 }
 
+function download_sdlcl()
+{
+	log "[SDLCL] downloading prebuilt"
+    curl -s -L https://github.com/tim241/sdlcl/releases/download/1/sdlcl.tar.gz -o "$cache_dir/sdlcl.tar.gz"
+}
+
+function install_prebuilt_sdlcl()
+{
+    mkdir -p "$cache_dir/sdlcl_bin"
+
+    sdlcl_prebuilt_file="$cache_dir/sdlcl.tar.gz"
+
+    if [ -f "$sdlcl_prebuilt_file" ]
+    then
+        if ! verify_checksum "$sdlcl_prebuilt_checksum" "$sdlcl_prebuilt_file"
+        then
+            download_sdlcl
+        fi
+    else
+        download_sdlcl
+    fi
+    
+	log "[SDLCL] extracting prebuilt"
+
+	tar xf "$cache_dir/sdlcl.tar.gz" -C "$cache_dir/sdlcl_bin"
+
+    if [ "$(uname -m | grep '64')" ]
+    then
+        cp "$cache_dir/sdlcl_bin/64/$sdlcl_file_name" \
+            "$cache_dir/bin/$sdlcl_file_name"
+    else
+        cp "$cache_dir/sdlcl_bin/32/$sdlcl_file_name" \
+            "$cache_dir/bin/$sdlcl_file_name"
+    fi
+}
+
+function install_sdlcl()
+{
+    if [ ! -f "/usr/lib/libSDL2.so" ]
+    then
+        return 1
+    fi
+
+    log "[SDLCL] SDL2 library found"
+    
+    if [ ! -f "$cache_dir/bin/$sdlcl_file_name" ]
+    then
+        log "[SDLCL] no prebuilt library found, trying to build SDLCL"
+        
+        log "[SDLCL] cloning repository"
+        git clone https://github.com/tim241/sdlcl "$cache_dir/sdlcl" &> "$cache_dir/sdlcl_git.log"
+
+        bdir="$(pwd)"
+        cd "$cache_dir/sdlcl"
+        
+        log "[SDLCL] trying to build"
+        if ! make -j$(nproc) &> "$cache_dir/sdlcl_make.log"
+        then
+			log "[SDLCL] building failed, installing prebuilt"
+            install_prebuilt_sdlcl
+        else
+            cp "$sdlcl_file_name" "$cache_dir/bin/$sdlcl_file_name"
+        fi 
+        cd "$bdir"
+    fi
+
+    log "[SDLCL] installing SDLCL"
+    cp "$cache_dir/bin/$sdlcl_file_name" "$game_dir/System/$sdlcl_file_name"
+
+    log "[SDLCL] cleaning"
+    rm -rf "$cache_dir/sdlcl_bin" \
+        "$cache_dir/sdlcl"
+}
+
 function install_symlinks()
 {
     log "[GAME] symlinking libraries"
-    ln -s /usr/lib/libSDL-1.2.so.0 \
-       "$game_dir/System/"
+    if ! install_sdlcl
+    then
+        ln -s /usr/lib/libSDL-1.2.so.0 \
+           "$game_dir/System/"
+    fi
     ln -s /usr/lib/libopenal.so \
         "$game_dir/System/openal.so"
 }
@@ -149,7 +230,8 @@ function prepare()
     
     mkdir -p "$data_dir" \
         "$data_dir/wine" \
-        "$cache_dir" 
+        "$cache_dir" \
+        "$cache_dir/bin"
 
     log "[WINE] creating wine prefix"
     wineboot --init &> "$cache_dir/wineboot.log"
