@@ -19,7 +19,7 @@ sdlcl_prebuilt_checksum="c593ac43a9e8913d308833fd79499bb0348bfc05f4fe469ecdacd2f
 sdlcl_file_name="libSDL-1.2.so.0"
 
 
-export WINEPREFIX="$data_dir/wine"
+export WINEPREFIX="$wine_dir/"
 
 function log()
 {
