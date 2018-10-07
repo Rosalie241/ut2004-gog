@@ -50,20 +50,34 @@ function install_symlinks()
 
 function get_cdkey()
 {
+    # don't crash when cdkey retrieval fails
+    set +e
+    
     log "[GAME] retrieving cdkey"
     cdkey="$(wine REG QUERY 'HKEY_LOCAL_MACHINE\SOFTWARE\Unreal Technology\Installed Apps\UT2004' \
         /v 'CDkey' \
         | awk '{ print $3 }' \
-        | sed -n 3p)"
+        | sed -n 3p \
+        | sed 's/\r//' \
+        2> "$cache_dir/cdkey.log")"
+    wineserver -w
 
-    if [ "$cdkey" ]
+    # crash on error again!
+    set -e
+
+    if [ "$cdkey" ] && \
+        [ "${#cdkey}" = "23" ]
     then
         log "[GAME] cdkey found: $cdkey"
+    elif [ "$cdkey" ]
+    then
+        log "[GAME] invalid cdkey found: $cdkey"
     else
         log "[GAME] failed to retrieve cdkey"
     fi
     
-    while [ ! "$cdkey" ]
+    while [ ! "$cdkey" ] || \
+        [ "${#cdkey}" != "23" ]
     do
         echo "Please enter the cdkey manually and press enter"
         printf "enter cdkey: "
@@ -116,13 +130,16 @@ function prepare()
 
     log "[WINE] creating wine prefix"
     wineboot --init &> "$cache_dir/wineboot.log"
+    wineserver -w
 
     log "[WINE] winetricks nocrashdialog"
     winetricks nocrashdialog &> "$cache_dir/winetricks.log"
-    
+    wineserver -w
+
     log "[WINE] launching '$exe'"
     wine "$exe" &> "$cache_dir/wine.log"
-    
+    wineserver -w
+
     log "[GAME] moving game files"
     mv "$wine_dir/drive_c/GOG Games/Unreal Tournament 2004/" \
         "$game_dir"
