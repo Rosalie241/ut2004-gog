@@ -8,8 +8,9 @@ opt_dir="/opt/ut2004-gog"
 game_dir="$data_dir/ut2004"
 wine_dir="$data_dir/wine"
 
-patch_url="https://raw.githubusercontent.com/tim241/ut2004-gog/master/ut2004-linux.tar.bz2"
-patch_checksum="438b9b13a367d46f23cce12b065382a55afa2fc68add1f1dd3db03b015f60bb3"
+patch_file_name="ut2004-linux.tar.gz"
+patch_url="https://raw.githubusercontent.com/tim241/ut2004-gog/master/$patch_file_name"
+patch_checksum="148b9cf081bb793c7f4668f25ae181fd9509d7fc540915b52d22a75d33b5a046"
 
 game_exe_checksum="327feb7c7d96a65be57ef34e5cd5e10bd57eb4082b2bd6028f1415168a0c8083"
 game_bin_checksum="677f388edebe3af7f12e5a16cdf5c5c20f9164c9d5da0eced1650d1b655adb81"
@@ -23,23 +24,19 @@ function log()
 
 function install_patch()
 {
-    if [ -f "$opt_dir/ut2004-linux.tar.bz2" ]
+    if [ -f "$opt_dir/$patch_file_name" ]
     then
-        patch_file="$opt_dir/ut2004-linux.tar.bz2"
+        patch_file="$opt_dir/$patch_file_name"
     else
-        patch_file="$cache_dir/ut2004-linux.tar.bz2"
+        patch_file="$cache_dir/$patch_file_name"
         log "[GAME] downloading game patch"
         curl -s "$patch_url" -o "$patch_file"
     fi
     
     verify_checksum "$patch_checksum" "$patch_file"
 
-    log "[GAME] extracting patch"
-    tar xf "$patch_file" -C "$data_dir/"
-    
-    log "[GAME] installing game patch"
-    cp -r "$data_dir/UT2004-Patch"/* \
-        "$game_dir"
+    log "[GAME] installing patch"
+    tar xf "$patch_file" -C "$game_dir/"
 }
 
 function install_symlinks()
@@ -77,9 +74,8 @@ function get_cdkey()
 
 function install_clean()
 {
-    log "[GAME] cleaning"
-    rm -rf "$wine_dir" \
-        "$data_dir/UT2004-Patch"
+    log "[WINE] removing wine prefix"
+    rm -rf "$wine_dir"
 }
 
 function install_cdkey()
