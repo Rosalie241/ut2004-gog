@@ -195,6 +195,7 @@ do
     if [ ! -f "$game_dir/$file" ]
     then
         missing=yes
+        break
     fi
 done
 
