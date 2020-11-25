@@ -220,7 +220,7 @@ function prepare()
     if [ -f "$bin" ] && \
          [ "${bin: -3}" = "bin" ]
     then
-        if ! true #! verify_checksum "$game_bin_checksum" "$bin"
+        if ! verify_checksum "$game_bin_checksum" "$bin"
         then
             exit 1
         fi
