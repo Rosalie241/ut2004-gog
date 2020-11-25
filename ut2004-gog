@@ -12,8 +12,8 @@ patch_file_name="ut2004-linux.tar.gz"
 patch_url="https://raw.githubusercontent.com/tim241/ut2004-gog/master/$patch_file_name"
 patch_checksum="148b9cf081bb793c7f4668f25ae181fd9509d7fc540915b52d22a75d33b5a046"
 
-game_exe_checksum="327feb7c7d96a65be57ef34e5cd5e10bd57eb4082b2bd6028f1415168a0c8083"
-game_bin_checksum="677f388edebe3af7f12e5a16cdf5c5c20f9164c9d5da0eced1650d1b655adb81"
+game_exe_checksum="1f8712b4da90a22d822e4f2c2a4d841df2692be96d0f85f9064c6c77480c3b85"
+game_bin_checksum="81b6c1cf3931bf030d918461a134eff49921a0809cf215a6066639d0e6f0bf67"
 
 sdlcl_prebuilt_checksum="c593ac43a9e8913d308833fd79499bb0348bfc05f4fe469ecdacd2feaa06bf37"
 sdlcl_file_name="libSDL-1.2.so.0"
@@ -310,6 +310,7 @@ done
 
 if [ "$missing" = "yes" ]
 then
+	if ! which winetricks > /dev/null 2>&1; then echo "winetricks not installed"; fi
     prepare "$@"
 fi
 
